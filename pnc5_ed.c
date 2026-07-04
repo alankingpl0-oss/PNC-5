@@ -21,15 +21,69 @@ unsigned char bufor[8192];
 size_t bity_w_buforze = 0;
 
 unsigned char ascii_na_pnc5(char c) {
-    c = toupper((unsigned char)c);
-    if (c >= 'A' && c <= 'Z') return c - 'A';
-    if (c == ' ') return 26;
-    if (c == '.') return 27;
-    if (c == ',') return 28;
-    if (c == '\n') return 29;
-    if (c == '?') return 30;
-    return 31;
+    /* Używamy wstawki AT&T/GCC inline assembly, która pod maską 
+       generuje czyste instrukcje kompatybilne z NASM dla x86_64.
+     */
+    unsigned char wynik;
+    unsigned char temp = (unsigned char)c;
+
+    /* Najpierw toupper w C, żeby ułatwić sprawę */
+    if (temp >= 'a' && temp <= 'z') {
+        temp -= 32;
+    }
+
+    __asm__ __volatile__ (
+        "movb %[c], %%al\n\t"         /* Załaduj znak do rejestru AL */
+        "cmpb $'A', %%al\n\t"         /* Sprawdź czy >= 'A' */
+        "jb .L_not_alpha\n\t"
+        "cmpb $'Z', %%al\n\t"         /* Sprawdź czy <= 'Z' */
+        "ja .L_not_alpha\n\t"
+        "subb $'A', %%al\n\t"         /* c - 'A' */
+        "jmp .L_done\n\t"
+        
+    ".L_not_alpha:\n\t"
+        "cmpb $' ', %%al\n\t"         /* Spacja -> 26 */
+        "jne .L_check_dot\n\t"
+        "movb $26, %%al\n\t"
+        "jmp .L_done\n\t"
+        
+    ".L_check_dot:\n\t"
+        "cmpb $'.', %%al\n\t"         /* Kropka -> 27 */
+        "jne .L_check_comma\n\t"
+        "movb $27, %%al\n\t"
+        "jmp .L_done\n\t"
+        
+    ".L_check_comma:\n\t"
+        "cmpb $',', %%al\n\t"         /* Przecinek -> 28 */
+        "jne .L_check_newline\n\t"
+        "movb $28, %%al\n\t"
+        "jmp .L_done\n\t"
+        
+    ".L_check_newline:\n\t"
+        "cmpb $'\n', %%al\n\t"        /* Nowa linia -> 29 */
+        "jne .L_check_question\n\t"
+        "movb $29, %%al\n\t"
+        "jmp .L_done\n\t"
+        
+    ".L_check_question:\n\t"
+        "cmpb $'?', %%al\n\t"         /* Znak zapytania -> 30 */
+        "jne .L_default\n\t"
+        "movb $30, %%al\n\t"
+        "jmp .L_done\n\t"
+        
+    ".L_default:\n\t"
+        "movb $31, %%al\n\t"          /* Wszystko inne -> MARKER_RLE */
+        
+    ".L_done:\n\t"
+        "movb %%al, %[wynik]\n\t"     /* Zapisz rejestr AL do zmiennej wyjściowej */
+        : [wynik] "=rm" (wynik)
+        : [c] "rm" (temp)
+        : "eax"
+    );
+
+    return wynik;
 }
+
 
 char pnc5_na_ascii(unsigned char p) {
     if (p <= 25) return 'A' + p;
@@ -211,9 +265,22 @@ void wyciagnij_nazwe_pliku(const char *komenda, char *nazwa_wyjsciowa) {
     }
 }
 
+void pokaz_statystyki() {
+    size_t bajty = (bity_w_buforze + 7) / 8;
+    double procent_zajetosci = ((double)bity_w_buforze / (sizeof(bufor) * 8)) * 100.0;
+    
+    printf("\n=== STATYSTYKI BUFORA ===\n");
+    printf("Zapisane bity:    %zu\n", bity_w_buforze);
+    printf("Zajęte bajty:     %zu / %zu\n", bajty, sizeof(bufor));
+    printf("Stan zapełnienia: %.2f%%\n", procent_zajetosci);
+    printf("=========================\n\n");
+}
+
+
+
 int main() {
     char komenda[256];
-    printf("Edytor PNC5 1.00rc1. Komendy: a, p, w [plik], r [plik], q.\n");
+    printf("Edytor PNC5 1.00. Komendy: a, p, w [plik], r [plik], s, q.\n");
 
     while (1) {
         printf("* ");
@@ -223,6 +290,8 @@ int main() {
             break;
         } else if (komenda[0] == 'p') {
             drukuj_bufor();
+        } else if (komenda[0] == 's') {
+            pokaz_statystyki();
         } else if (komenda[0] == 'w') {
             char nazwa_pliku[256];
             wyciagnij_nazwe_pliku(komenda, nazwa_pliku);
