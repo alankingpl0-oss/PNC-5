@@ -266,14 +266,40 @@ void wyciagnij_nazwe_pliku(const char *komenda, char *nazwa_wyjsciowa) {
     }
 }
 
+/* Rozbudowane statystyki */
 void pokaz_statystyki() {
     size_t bajty = (bity_w_buforze + 7) / 8;
     double procent_zajetosci = ((double)bity_w_buforze / (sizeof(bufor) * 8)) * 100.0;
     
+    /* Liczba odczytanych znaków po dekompresji RLE */
+    size_t b = 0;
+    size_t licznik_znakow = 0;
+    while (b + 5 <= bity_w_buforze) {
+        unsigned char kod = czytaj_5_bitow(b);
+        b += 5;
+        if (kod == MARKER_RLE) {
+            if (b + 10 <= bity_w_buforze) {
+                unsigned char nastepny = czytaj_5_bitow(b);
+                unsigned char licznik = czytaj_5_bitow(b + 5);
+                b += 10;
+                if (nastepny == MARKER_RLE) break;
+                licznik_znakow += (licznik + 3);
+            } else break;
+        } else {
+            licznik_znakow++;
+        }
+    }
+
+    size_t ascii_rozmiar = licznik_znakow; // 1 znak = 1 bajt w ASCII
+    double oszczednosc = ascii_rozmiar > 0 ? (1.0 - ((double)bajty / ascii_rozmiar)) * 100.0 : 0.0;
+
     printf("\n=== STATYSTYKI BUFORA ===\n");
-    printf("Zapisane bity:    %zu\n", bity_w_buforze);
-    printf("Zajęte bajty:     %zu / %zu\n", bajty, sizeof(bufor));
-    printf("Stan zapełnienia: %.2f%%\n", procent_zajetosci);
+    printf("Zapisane bity:         %zu\n", bity_w_buforze);
+    printf("Zajęte bajty:          %zu / %zu\n", bajty, sizeof(bufor));
+    printf("Stan zapełnienia:      %.2f%%\n", procent_zajetosci);
+    printf("Liczba znaków tekstu:  %zu\n", licznik_znakow);
+    printf("Rozmiar jako ASCII:    %zu bajtów\n", ascii_rozmiar);
+    printf("Zysk z kompresji:      %.2f%%\n", oszczednosc);
     printf("=========================\n\n");
 }
 
