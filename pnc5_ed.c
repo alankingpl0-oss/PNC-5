@@ -183,26 +183,30 @@ void kompresuj_i_zapisz_ciag(const char *wiersz) {
         unsigned char kod = ascii_na_pnc5(wiersz[i]);
         int pozostalo = dlugosc;
 
-/* TO WSTAWIAMY: */
-if (pozostalo >= 4 && kod != 31) {
-    while (pozostalo >= 4) {
-        int chunk = (pozostalo > 34) ? 34 : pozostalo;
-        /* Jeśli po odjęciu max chunk zostanie nam np. 1, 2 lub 3 znaki,
-           to pętla while się skończy, a te resztki dopisze dolna pętla 'for'. */
-        zapisz_5_bitow(MARKER_RLE);
-        zapisz_5_bitow(kod);
-        zapisz_5_bitow(chunk - 3);
-        pozostalo -= chunk;
-    }
-    /* Dopisanie resztek (0-3 znaków), dla których RLE byłoby nieopłacalne */
-    for (int j = 0; j < pozostalo; j++) {
-        zapisz_5_bitow(kod);
-    }
-}
+        if (pozostalo >= 4 && kod != 31) {
+            /* Kompresujemy długie ciągi za pomocą RLE */
+            while (pozostalo >= 4) {
+                int chunk = (pozostalo > 34) ? 34 : pozostalo;
+                zapisz_5_bitow(MARKER_RLE);
+                zapisz_5_bitow(kod);
+                zapisz_5_bitow(chunk - 3);
+                pozostalo -= chunk;
+            }
+            /* Dopisanie resztek (0-3 znaków), dla których RLE byłoby nieopłacalne */
+            for (int j = 0; j < pozostalo; j++) {
+                zapisz_5_bitow(kod);
+            }
+        } else {
+            /* Zwykły zapis znak po znaku dla krótkich serii lub znaków spoza tabeli */
+            for (int j = 0; j < pozostalo; j++) {
+                zapisz_5_bitow(kod);
+            }
+        }
 
         i += dlugosc; /* Indeks przesuwa sie teraz o faktyczna liczbe znakow */
     }
 }
+
 
 void zapisz_do_pliku(const char *nazwa_pliku) {
     FILE *f = fopen(nazwa_pliku, "wb");
