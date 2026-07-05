@@ -147,6 +147,7 @@ void drukuj_bufor() {
                 unsigned char licznik = czytaj_5_bitow(b + 5);
                 b += 10;
 
+                /* Jeśli w pliku trafimy na EOFT, to kończymy dekompresję */
                 if (nastepny == MARKER_RLE) {
                     break;
                 }
@@ -163,7 +164,9 @@ void drukuj_bufor() {
             putchar(pnc5_na_ascii(kod));
         }
     }
+    putchar('\n'); /* Warto dodać dla estetyki w jargon CLI */
 }
+
 
 /* * Poprawiona funkcja kompresji RLE. 
  * Wprowadzono zmienna pomocnicza, dzieki czemu indeks glowny 'i' inkrementuje sie prawidlowo.
@@ -208,6 +211,10 @@ void zapisz_do_pliku(const char *nazwa_pliku) {
         return;
     }
 
+    /* Zapamiętujemy oryginalny stan bufora */
+    size_t oryginalne_bity = bity_w_buforze;
+
+    /* Dopisujemy marker końca pliku (EOFT) tylko na potrzeby zapisu */
     zapisz_5_bitow(MARKER_RLE);
     zapisz_5_bitow(MARKER_RLE);
 
@@ -219,14 +226,8 @@ void zapisz_do_pliku(const char *nazwa_pliku) {
     fclose(f);
     printf("%zu bajtow zapisanego pliku\n", bajty_do_zapisu);
     
-    bity_w_buforze -= 10;
-
-    /* Czyszczenie bitow po markerze EOFT, by uniknac interferencji przy nastepnym 'a' */
-    for (size_t i = bity_w_buforze; i < bity_w_buforze + 10; i++) {
-        size_t b_idx = i / 8;
-        size_t b_off = i % 8;
-        bufor[b_idx] &= ~(1 << (7 - b_off));
-    }
+    /* Przywracamy wskaźnik bitów do stanu sprzed zapisu, ignorując dopisany marker */
+    bity_w_buforze = oryginalne_bity;
 }
 
 void wczytaj_z_pliku(const char *nazwa_pliku) {
