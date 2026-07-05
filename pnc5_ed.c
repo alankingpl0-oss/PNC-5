@@ -180,22 +180,23 @@ void kompresuj_i_zapisz_ciag(const char *wiersz) {
         unsigned char kod = ascii_na_pnc5(wiersz[i]);
         int pozostalo = dlugosc;
 
-        if (pozostalo >= 3 && kod != 31) {
-            while (pozostalo >= 3) {
-                int chunk = (pozostalo > 34) ? 34 : pozostalo;
-                zapisz_5_bitow(MARKER_RLE);
-                zapisz_5_bitow(kod);
-                zapisz_5_bitow(chunk - 3);
-                pozostalo -= chunk;
-            }
-            for (int j = 0; j < pozostalo; j++) {
-                zapisz_5_bitow(kod);
-            }
-        } else {
-            for (int j = 0; j < dlugosc; j++) {
-                zapisz_5_bitow(kod);
-            }
-        }
+/* TO WSTAWIAMY: */
+if (pozostalo >= 4 && kod != 31) {
+    while (pozostalo >= 4) {
+        int chunk = (pozostalo > 34) ? 34 : pozostalo;
+        /* Jeśli po odjęciu max chunk zostanie nam np. 1, 2 lub 3 znaki,
+           to pętla while się skończy, a te resztki dopisze dolna pętla 'for'. */
+        zapisz_5_bitow(MARKER_RLE);
+        zapisz_5_bitow(kod);
+        zapisz_5_bitow(chunk - 3);
+        pozostalo -= chunk;
+    }
+    /* Dopisanie resztek (0-3 znaków), dla których RLE byłoby nieopłacalne */
+    for (int j = 0; j < pozostalo; j++) {
+        zapisz_5_bitow(kod);
+    }
+}
+
         i += dlugosc; /* Indeks przesuwa sie teraz o faktyczna liczbe znakow */
     }
 }
