@@ -17,6 +17,9 @@
 
 #define MARKER_RLE 31
 
+/*
+ * Pomidor.
+ */
 unsigned char bufor[8192];
 size_t bity_w_buforze = 0;
 
@@ -295,7 +298,7 @@ void pokaz_statystyki() {
         }
     }
 
-    size_t ascii_rozmiar = licznik_znakow; // 1 znak = 1 bajt w ASCII
+    size_t ascii_rozmiar = licznik_znakow; /* 1 znak = 1 bajt w ASCII */
     double oszczednosc = ascii_rozmiar > 0 ? (1.0 - ((double)bajty / ascii_rozmiar)) * 100.0 : 0.0;
 
     printf("\n=== STATYSTYKI BUFORA ===\n");
@@ -312,7 +315,7 @@ void pokaz_statystyki() {
 
 int main() {
     char komenda[256];
-    printf("Edytor PNC5 1.00. Komendy: a, p, w [plik], r [plik], s, q.\n");
+    printf("Edytor PNC5 1.01. Komendy: a, p, w [plik], r [plik], s, q.\n");
 
     while (1) {
         printf("* ");
