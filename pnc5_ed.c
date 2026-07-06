@@ -3,7 +3,7 @@
 #include <ctype.h>
 #include <string.h>
 
-/* PNC5 Edit v2.2, licencja GPL 2.0 */
+/* PNC5 Edit 1.01, licencja GPL 2.0 */
 
 /* * Tabela kodowania PNC5 (32 mozliwosci):
  * 0-25: A-Z
